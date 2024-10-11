@@ -1,11 +1,14 @@
 import mongoose from "mongoose";
 
+/**
+ * Connect to the database
+ */
 export const connectDb = async () => {
     try {
         const mongoUri = process.env.MONGODB_URI;
         if (!mongoUri) {
             console.error('MongoDB connection string is missing. Exiting process.');
-            process.exit(1); // Exit the application if no MongoDB URI is found
+            process.exit(1);
         }
         const db = await mongoose.connect(mongoUri);
         db.connection.on('error', (error) => {

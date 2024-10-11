@@ -1,0 +1,28 @@
+<mat-expansion-panel class="container">
+  <mat-expansion-panel-header>
+    <mat-panel-title class="d-flex align-items-start justify-content-between">
+      <div class="d-flex">
+        <img class="img" src="./assets/github-mark.svg"> Github
+        <img class="img" src="./assets/success.svg" *ngIf="(user$ | async) as user" />
+      </div>
+      <div class="details" *ngIf="user$ | async as user">
+        {{user.username}} : Last Sync {{user.connectedAt | date: 'medium'}}
+      </div>
+    </mat-panel-title>
+  </mat-expansion-panel-header>
+
+  <div class="d-flex justify-content-end" *ngIf="user$ | async as user; else notLoggedIn">
+    <button mat-raised-button color="primary" (click)="remove()">Remove
+
+      <img class="img" src="./assets/incognito.svg" *ngIf="(user$ | async) as user" />
+
+    </button>
+  </div>
+
+  <ng-template #notLoggedIn>
+    <div class="d-flex flex-column align-items-center justify-content-center">
+      <button mat-raised-button color="primary" (click)="connect()">Connect</button>
+      <p class="mat-body-1">Connect SREDIO TO Github</p>
+    </div>
+  </ng-template>
+</mat-expansion-panel>

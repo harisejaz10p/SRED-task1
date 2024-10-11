@@ -12,35 +12,21 @@ class ExternalAuthController {
     public authenticate(req: Request, res: Response): void {
         const redirectUri = `${GITHUB_CALLBACK_URL}${EXTERNAL_AUTH_BASE_URL}${EXTERNAL_AUTH_GITHUB_CALLBACK_URL}`;
         const githubAuthUrl = getGithubOAuthUrl(GITHUB_CLIENT_ID, redirectUri);
-        res.redirect(githubAuthUrl);
+        res.json({
+            url: githubAuthUrl
+        });
     }
 
     public async removeIntegration(req: Request, res: Response): Promise<void> {
         try {
-            const accessToken = this.parseAuthHeader(req);
+            const accessToken = parseAuthHeader(req)
             if (!accessToken) {
                 res.status(401).json({ message: 'Missing access token' });
                 return;
             }
 
-            const githubUserData = await fetchData<{ login: string }>(GITHUB_IDENTITY_URL, 'GET', null, {
-                Authorization: `Bearer ${accessToken}`
-            });
-
-            const githubUsername = githubUserData?.login;
-            if (!githubUsername) {
-                res.status(401).json({ message: 'Invalid access token or unable to fetch GitHub user data' });
-                return;
-            }
-
-            const storedUser = await GithubUserSchema.findOne({ username: githubUsername });
-            if (!storedUser) {
-                res.status(404).json({ message: 'No matching user found in the system' });
-                return;
-            }
-
-            await GithubUserSchema.deleteMany({ username: githubUsername });
-            res.json({ message: `Integration for user ${githubUsername} removed successfully.` });
+            await GithubUserSchema.deleteMany({ accessToken });
+            res.json({ message: `Integration for user removed successfully.` });
 
         } catch (error) {
             console.error('Error removing GitHub integration:', error);
@@ -50,7 +36,7 @@ class ExternalAuthController {
 
     public async getStatus(req: Request, res: Response): Promise<void> {
         try {
-            const accessToken = this.parseAuthHeader(req);
+            const accessToken = parseAuthHeader(req);
             if (!accessToken) {
                 res.status(401).json({ message: 'Missing access token' });
                 return;
@@ -78,8 +64,8 @@ class ExternalAuthController {
                 connectedAt: storedUser.createdAt
             });
         } catch (error) {
-            console.error('Error fetching GitHub user status:', error);
-            res.status(500).send('Error fetching GitHub user status');
+            // Return 401 if GitHub API returns 401
+            res.status(401).json({ message: 'Invalid or expired access token' });
         }
     }
 
@@ -134,27 +120,30 @@ class ExternalAuthController {
             res.status(500).send('Error during GitHub OAuth callback');
         }
     }
-
-    private parseAuthHeader(req: Request): string | null {
-        const authHeader = req.headers.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            return authHeader.split(' ')[1];
-        }
-        return null;
-    }
 }
 
+/**
+ * Export an instance of the ExternalAuthController
+ */
 export default new ExternalAuthController();
 
 //#region Internal
 /////////////////////////////////////////////////////////////
 
 interface IGithubUserResponse {
-    login: string;
-    avatar_url: string;
-    email: string;
-    id: number;
-    accessToken: string;
+    readonly login: string;
+    readonly avatar_url: string;
+    readonly email: string;
+    readonly id: number;
+    readonly accessToken: string;
+}
+
+function parseAuthHeader(req: Request): string | null {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        return authHeader.split(' ')[1];
+    }
+    return null;
 }
 
 /////////////////////////////////////////////////////////////

@@ -1,9 +1,9 @@
+// Routes for setting up external authentication with GitHub
 import { Router } from 'express';
 import { EXTERNAL_AUTH_GITHUB_CALLBACK_URL, EXTERNAL_AUTH_GITHUB_REMOVE_URL, EXTERNAL_AUTH_GITHUB_IDENTITY_URL, EXTERNAL_AUTH_GITHUB_URL } from '../constants/constants';
 import ExternalAuthController from "../controllers/external-auth.controller";
 
 const router = Router();
-
 
 router.get(EXTERNAL_AUTH_GITHUB_URL, ExternalAuthController.authenticate);
 router.get(EXTERNAL_AUTH_GITHUB_CALLBACK_URL, ExternalAuthController.callback);
