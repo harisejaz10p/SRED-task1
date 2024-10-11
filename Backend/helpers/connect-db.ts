@@ -2,7 +2,12 @@ import mongoose from "mongoose";
 
 export const connectDb = async () => {
     try {
-        const db = await mongoose.connect(process.env.MONGO_URI!);
+        const mongoUri = process.env.MONGODB_URI;
+        if (!mongoUri) {
+            console.error('MongoDB connection string is missing. Exiting process.');
+            process.exit(1); // Exit the application if no MongoDB URI is found
+        }
+        const db = await mongoose.connect(mongoUri);
         db.connection.on('error', (error) => {
             console.error('Error connecting to the database', error);
         });

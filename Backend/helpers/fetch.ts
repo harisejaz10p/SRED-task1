@@ -17,6 +17,7 @@ export async function fetchData<T>(
             method,
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 ...headers,
             },
             body: body ? JSON.stringify(body) : null,
