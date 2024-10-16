@@ -11,7 +11,7 @@ This task focuses on integrating GitHub's API to fetch organizations, repositori
 - [API Endpoints](#api-endpoints)
 
 ## Working Demo
-![TASK_!_WORKING](https://github.com/user-attachments/assets/838e05ce-9c27-4637-84f8-7839aed24993)
+![TASK_2_WORKING](https://github.com/user-attachments/assets/05edcd37-400f-4e31-ab4c-fee673186d6f)
 
 ## Features
 - GitHub OAuth 2.0 Authentication
