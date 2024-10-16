@@ -43,6 +43,26 @@ export class ApiService {
     return this.httpClient.post<T>(`${this.baseUrl}/${url}`, body);
   }
 
+  /**
+   * Regular Put request without options
+   * @param url - URL
+   * @param body - request body
+   * @returns
+   */
+  put<T>(url: string, body: any): Observable<T> {
+    return this.httpClient.put<T>(`${this.baseUrl}/${url}`, body);
+  }
+
+  /**
+   * Regular Patch request without options
+   * @param url - URL
+   * @param body - request body
+   * @returns
+   */
+  patch<T>(url: string, body: any): Observable<T> {
+    return this.httpClient.patch<T>(`${this.baseUrl}/${url}`, body);
+  }
+
   /////////////////////////////////////////////////////////////
   //#endregion
 

@@ -52,10 +52,19 @@
 }
 
 .details {
- color: grey;
+  color: grey;
 }
 
 .mat-body-1 {
   color: #3f51b5;
   font-weight: bold;
+}
+
+.mt-2 {
+  margin-top: 2rem;
+}
+
+.expansion-panel {
+  max-height: 600px;
+  overflow: auto;
 }

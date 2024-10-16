@@ -1,6 +1,5 @@
 import { CanActivateFn } from '@angular/router';
 import { inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { UserAuthenticatedService } from 'src/app/core/services/user-authenticated.service';
@@ -25,7 +24,6 @@ export const authGuard: CanActivateFn = (route, state) => {
   if (currentUser != null) {
     return of(true);
   }
-
 
   return homeService.identify().pipe(
     map((data) => {

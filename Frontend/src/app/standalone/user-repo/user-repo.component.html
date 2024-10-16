@@ -1,0 +1,13 @@
+<div class="row" *ngIf="!isUserRepoLoading; else spinner">
+  <app-data-table [rowData]="userRepos" [columnDefs]="userRepoColDef"></app-data-table>
+</div>
+
+<div class="row" *ngIf="!isUserStatsLoading; else spinner">
+  <app-data-table [rowData]="userStats" [columnDefs]="userStatsDef"></app-data-table>
+</div>
+
+<ng-template #spinner>
+  <div class="d-flex justify-content-center">
+    <mat-spinner />
+  </div>
+</ng-template>

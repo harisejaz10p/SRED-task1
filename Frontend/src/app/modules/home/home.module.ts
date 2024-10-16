@@ -5,8 +5,12 @@ import { HomeComponent } from "src/app/modules/home/home.component";
 import { NgModule } from "@angular/core";
 import { HomeRoutingModule } from "src/app/modules/home/home.routing";
 import { MatIconModule } from '@angular/material/icon';
-import {MatSnackBarModule} from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { UserRepoComponent } from "src/app/standalone/user-repo/user-repo.component";
 
+/**
+ * Home module.
+ */
 @NgModule({
   declarations: [
     HomeComponent
@@ -17,7 +21,8 @@ import {MatSnackBarModule} from '@angular/material/snack-bar';
     MatIconModule,
     MatButtonModule,
     MatExpansionModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    UserRepoComponent
   ],
   providers: [],
 })

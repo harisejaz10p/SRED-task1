@@ -4,7 +4,7 @@ import { connectDb } from './helpers/connect-db';
 import express from 'express';
 import bodyParser from 'body-parser';
 import { EXTERNAL_AUTH_BASE_URL } from './constants/constants';
-import routes from './routes/external-auth.route';
+import routes from './routes/route';
 import cors from 'cors';
 
 (async () => {

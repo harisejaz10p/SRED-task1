@@ -20,8 +20,7 @@ export class HomeComponent {
 
   private readonly homeService = inject(HomeService);
   private readonly userAuthenticatedService = inject(UserAuthenticatedService);
-  private _snackBar = inject(MatSnackBar);
-
+  private readonly _snackBar = inject(MatSnackBar);
 
   /////////////////////////////////////////////////////////////
   //#endregion

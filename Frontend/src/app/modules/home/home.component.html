@@ -10,19 +10,23 @@
       </div>
     </mat-panel-title>
   </mat-expansion-panel-header>
+  <div class="expansion-panel">
+    <ng-container *ngIf="user$ | async as user; else notLoggedIn">
+      <div class="d-flex justify-content-end">
+        <button mat-raised-button color="primary" (click)="remove()">Remove
+          <img class="img" src="./assets/incognito.svg" *ngIf="(user$ | async) as user" />
+        </button>
+      </div>
+      <div class="d-flex justify-content-end flex-column mt-2">
+        <app-user-repo />
+      </div>
 
-  <div class="d-flex justify-content-end" *ngIf="user$ | async as user; else notLoggedIn">
-    <button mat-raised-button color="primary" (click)="remove()">Remove
-
-      <img class="img" src="./assets/incognito.svg" *ngIf="(user$ | async) as user" />
-
-    </button>
+    </ng-container>
+    <ng-template #notLoggedIn>
+      <div class="d-flex flex-column align-items-center justify-content-center">
+        <button mat-raised-button color="primary" (click)="connect()">Connect</button>
+        <p class="mat-body-1">Connect SREDIO TO Github</p>
+      </div>
+    </ng-template>
   </div>
-
-  <ng-template #notLoggedIn>
-    <div class="d-flex flex-column align-items-center justify-content-center">
-      <button mat-raised-button color="primary" (click)="connect()">Connect</button>
-      <p class="mat-body-1">Connect SREDIO TO Github</p>
-    </div>
-  </ng-template>
 </mat-expansion-panel>

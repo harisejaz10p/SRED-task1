@@ -11,7 +11,7 @@ export async function fetchData<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
     body?: any,
     headers: Record<string, string> = {},
-): Promise<T> {
+): Promise<{ data: T; headers: Headers }> {
     try {
         const response = await fetch(url, {
             method,
@@ -28,7 +28,8 @@ export async function fetchData<T>(
         }
 
         const data: T = await response.json();
-        return data;
+        const responseHeaders = response.headers;
+        return { data, headers: responseHeaders };
     } catch (error) {
         console.error('Fetch API call failed:', error);
         throw error;
