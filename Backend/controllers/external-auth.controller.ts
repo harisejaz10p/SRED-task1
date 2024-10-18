@@ -1,8 +1,8 @@
 import { EXTERNAL_AUTH_BASE_URL, EXTERNAL_AUTH_GITHUB_CALLBACK_URL, GITHUB_CALLBACK_URL, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_IDENTITY_URL, GITHUB_TOKEN_URL } from "../constants/constants";
 import { getCallbackUrlWithToken, getGithubOAuthUrl } from "../helpers/url";
 import { Request, Response } from 'express';
-import { GithubUserSchema } from "../models/github-user.model";
 import { fetchData } from "../helpers/fetch";
+import { deleteUserByToken, findUserByUsername, saveNewUser, findAndUpdateUser } from "../helpers/user";
 
 /**
  * Controller for handling external authentication requests.
@@ -30,8 +30,7 @@ class ExternalAuthController {
   public async removeIntegration(req: Request, res: Response): Promise<void> {
     try {
       //@ts-ignore
-      const accessToken = req.accessToken;
-      await GithubUserSchema.deleteMany({ accessToken });
+      await deleteUserByToken(req.accessToken);
       res.json({ message: `Integration for user removed successfully.` });
 
     } catch (error) {
@@ -49,17 +48,16 @@ class ExternalAuthController {
     try {
       //@ts-ignore
       const accessToken = req.accessToken;
-      const { data: githubUserData } = await fetchData<IGithubUserResponse>(GITHUB_IDENTITY_URL, 'GET', null, {
+      const { data: { login: username } } = await fetchData<IGithubUserResponse>(GITHUB_IDENTITY_URL, 'GET', null, {
         Authorization: `Bearer ${accessToken}`
       });
 
-      const githubUsername = githubUserData?.login;
-      if (!githubUsername) {
+      if (!username) {
         res.status(401).json({ message: 'Invalid access token or unable to fetch GitHub user data' });
         return;
       }
 
-      const storedUser = await GithubUserSchema.findOne({ username: githubUsername });
+      const storedUser = await findUserByUsername(username);
       if (!storedUser) {
         res.status(404).json({ message: 'No matching user found in the system' });
         return;
@@ -71,7 +69,6 @@ class ExternalAuthController {
         connectedAt: storedUser.createdAt
       });
     } catch (error) {
-      // Return 401 if GitHub API returns 401
       res.status(401).json({ message: 'Invalid or expired access token' });
     }
   }
@@ -90,13 +87,12 @@ class ExternalAuthController {
         res.status(400).send('Missing authorization code');
         return;
       }
-      const { data: tokenResponse } = await fetchData<{ access_token: string }>(GITHUB_TOKEN_URL, 'POST', {
+      const { data: { access_token: accessToken } } = await fetchData<{ access_token: string }>(GITHUB_TOKEN_URL, 'POST', {
         client_id: GITHUB_CLIENT_ID,
         client_secret: GITHUB_CLIENT_SECRET,
         code
       });
 
-      const accessToken = tokenResponse?.access_token;
       if (!accessToken) {
         res.status(401).json({ message: 'Failed to obtain access token' });
         return;
@@ -106,33 +102,24 @@ class ExternalAuthController {
         Authorization: `Bearer ${accessToken}`
       });
 
-      const githubUsername = githubUserData?.login;
-      if (!githubUsername) {
+      if (!githubUserData) {
         res.status(401).json({ message: 'Invalid access token or unable to fetch GitHub user data' });
         return;
       }
       const redirectUrl = getCallbackUrlWithToken(accessToken);
-
-      const existingUser = await GithubUserSchema.findOneAndUpdate(
-        { username: githubUsername },
-        { accessToken: accessToken },
-        { new: true }
-      );
+      const existingUser = await findAndUpdateUser(githubUserData.login, accessToken);
 
       if (existingUser) {
         return res.redirect(redirectUrl);
       }
 
-      const newUser = new GithubUserSchema({
-        username: githubUsername,
+      await saveNewUser({
+        username: githubUserData.login,
+        accessToken,
         avatarUrl: githubUserData.avatar_url ?? '',
         email: githubUserData.email ?? '',
-        id: githubUserData.id,
-        accessToken
+        id: githubUserData.id
       });
-
-      // Save the new user to the database
-      await newUser.save();
 
       res.redirect(redirectUrl);
     } catch (error) {

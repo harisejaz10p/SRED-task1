@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-interface IRepo extends Document {
+export interface IRepo extends Document {
     readonly name: string;
     readonly id: number;
     readonly slug: string;

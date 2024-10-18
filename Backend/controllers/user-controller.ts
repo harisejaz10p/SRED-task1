@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
 import { fetchAllUserOrganizations, fetchMultipleRepoData } from '../helpers/github-util';
-import { IRepoModel, Repo } from '../models/github-repo.model';
-import { GithubUserSchema } from "../models/github-user.model";
-
+import { saveOrganizationRepos, getRepos, findUserByToken, getIncludedRepos, updateIncludedRepos } from '../helpers/user';
 /**
  * Controller for handling user related requests.
  */
@@ -17,35 +15,14 @@ class UserController {
         try {
             //@ts-ignore
             const accessToken = req.accessToken;
-            const user = await GithubUserSchema.findOne({ accessToken });
+            const user = await findUserByToken(accessToken);
             if (!user) {
-                res.status(404).json({ message: 'User not found' });
+                res.status(401).json({ message: 'Invalid access token or unable to fetch user data' });
                 return;
             }
-
             const data = await fetchAllUserOrganizations(accessToken);
-            for (const org of data) {
-                for (const repo of org.repos) {
-                    const existingRepo = await Repo.findOne({ id: repo.id });
-                    const repoData: IRepoModel = {
-                        id: repo.id,
-                        name: repo.name,
-                        slug: repo.full_name,
-                        userLogin: user.username,
-                        organization: org.login,
-                        included: existingRepo ? existingRepo.included : false,
-                        html_url: repo.html_url
-                    };
-
-                    await Repo.updateOne(
-                        { id: repo.id },
-                        repoData,
-                        { upsert: true }
-                    );
-                }
-            }
-
-            const repos = await Repo.find({ userLogin: user.username });
+            saveOrganizationRepos(user, data)
+            const repos = await getRepos(user.username);
             res.json(repos);
 
         } catch (error) {
@@ -62,7 +39,7 @@ class UserController {
     public async getReposData(req: Request, res: Response): Promise<void> {
         //@ts-ignore
         const accessToken = req.accessToken;
-        const includedRepos = await Repo.find({ included: true });
+        const includedRepos = await getIncludedRepos()
         if (includedRepos.length === 0) {
             res.json([]);
             return;
@@ -91,12 +68,8 @@ class UserController {
             }
 
             // Find and update the 'included' field of the repository
-            const result = await Repo.updateOne({ id, organization }, { included });
-            if (result.modifiedCount === 0) {
-                res.status(404).json({ message: 'Repository not found or no changes applied.' });
-            } else {
-                res.status(200).json({ message: 'Repository included status updated successfully.' });
-            }
+            const result = await updateIncludedRepos(id, organization, included);
+            !result ? res.status(404).json({ message: 'Repository not found or no changes applied.' }) : res.status(200).json({ message: 'Repository included status updated successfully.' });
 
         } catch (error) {
             console.error('Error updating repository included status:', error);
