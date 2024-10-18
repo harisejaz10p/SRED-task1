@@ -103,7 +103,6 @@ class UserController {
             res.status(500).json({ message: 'Error updating repository included status.' });
         }
     }
-
 }
 
 /**
