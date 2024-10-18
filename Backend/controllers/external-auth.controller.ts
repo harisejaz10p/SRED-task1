@@ -1,5 +1,5 @@
 import { EXTERNAL_AUTH_BASE_URL, EXTERNAL_AUTH_GITHUB_CALLBACK_URL, GITHUB_CALLBACK_URL, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_IDENTITY_URL, GITHUB_TOKEN_URL } from "../constants/constants";
-import { getCallbackUrlWithToken, getGithubOAuthUrl } from "../helpers/url";
+import { getCallbackUrlWithToken, getGithubOAuthUrl, revokeGithubTokenUrl } from "../helpers/url";
 import { Request, Response } from 'express';
 import { fetchData } from "../helpers/fetch";
 import { deleteUserByToken, findUserByUsername, saveNewUser, findAndUpdateUser } from "../helpers/user";
@@ -30,12 +30,21 @@ class ExternalAuthController {
   public async removeIntegration(req: Request, res: Response): Promise<void> {
     try {
       //@ts-ignore
-      await deleteUserByToken(req.accessToken);
+      const access_token = req.accessToken;
+      await deleteUserByToken(access_token);
+      const credentials = `${GITHUB_CLIENT_ID}:${GITHUB_CLIENT_SECRET}`;
+      const encodedCredentials = btoa(credentials);
+      await fetchData(revokeGithubTokenUrl(), 'DELETE', {
+        access_token
+      }, {
+        Authorization: `Basic ${encodedCredentials}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      });
       res.json({ message: `Integration for user removed successfully.` });
-
     } catch (error) {
       console.error('Error removing GitHub integration:', error);
-      res.status(500).send('Error removing integration');
+      res.status(200).json({ message: `Integration for user removed successfully with some complications ` });
     }
   }
 

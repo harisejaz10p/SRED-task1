@@ -4,42 +4,62 @@ import { GitHubCommit, GitHubIssue, GithubPullRequest, IGithubRepoResponse } fro
 import { fetchData } from "./fetch";
 import { getGithubCommitsUrl, getGithubIssuesUrl, getGithubOrgRepoUrl, getGithubPullRequestUrl } from "./url";
 
+const PAGINATION_QUERY = "?per_page=100&page=";
+
+function getAuhHeader(toke: string): {
+    Authorization: string;
+    Accept: string;
+} {
+    return {
+        Authorization: `Bearer ${toke}`,
+        Accept: "application/vnd.github+json",
+    }
+}
+
+/**
+ * Fetches all data for given url.
+ * @param token - Github access token.
+ * @param urlBuilder - Function to build the url.
+ * @returns 
+ */
+async function fetchPaginatedData<T>(
+    token: string,
+    urlBuilder: (page: number) => string
+): Promise<readonly T[]> {
+    let results: T[] = [];
+    let page = 1;
+    let hasNextPage = true;
+
+    while (hasNextPage) {
+        const url = urlBuilder(page);
+        const requestHeader = getAuhHeader(token);
+        try {
+            const { data, headers } = await fetchData<T[]>(url, 'GET', undefined, requestHeader);
+            results = results.concat(data);
+
+            const linkHeader = headers.get('link');
+            hasNextPage = (linkHeader && linkHeader.includes('rel="next"')) ? true : false;
+            page++;
+        } catch (error) {
+            console.error('Error fetching paginated data:', error);
+            throw error;
+        }
+    }
+
+    return results;
+}
+
 /**
  * Fetches all repositories for a user with token.
  * @param token - Github access token
  * @returns - List of repositories
  */
 export async function fetchAllUserOrganizations(token: string): Promise<readonly IGithubOrganizationResponse[]> {
-    let organizations: IGithubOrganizationResponse[] = [];
-    let page = 1;
-    let hasNextPage = true;
-
-    while (hasNextPage) {
-        const url = `${GITHUB_USER_ORGS_URL}?per_page=100&page=${page}`;
-        const requestHeader = {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json"
-        };
-
-        try {
-            const { data, headers } = await fetchData<IGithubOrganizationResponse[]>(url, 'GET', undefined, requestHeader);
-            organizations = organizations.concat(data);
-
-            const linkHeader = headers.get('link');
-            if (linkHeader && linkHeader.includes('rel="next"')) {
-                page++;
-            } else {
-                hasNextPage = false;
-            }
-        } catch (error) {
-            console.error('Error fetching organizations:', error);
-            throw error;
-        }
-    }
+    const organizations = await fetchPaginatedData<IGithubOrganizationResponse>(token, (page) => `${GITHUB_USER_ORGS_URL}${PAGINATION_QUERY}${page}`);
     // Fetch repos for each organization using the pagination function
     const orgWithRepos = await Promise.all(
         organizations.map(async (org) => {
-            const repos = await fetchOrgReposWithPagination(token, org.login);
+            const repos = await fetchPaginatedData<IGithubRepoResponse>(token, (page) => `${getGithubOrgRepoUrl(org.login)}${PAGINATION_QUERY}${page}`);
             return {
                 id: org.id,
                 login: org.login,
@@ -47,52 +67,7 @@ export async function fetchAllUserOrganizations(token: string): Promise<readonly
             };
         })
     );
-
     return orgWithRepos;
-}
-
-/**
- * Fetches all repositories for an organization with pagination.
- * @param token - Github access token
- * @param orgLogin - Github organization login
- * @returns - List of repositories
- */
-export async function fetchOrgReposWithPagination(token: string, orgLogin: string): Promise<readonly IGithubRepoResponse[]> {
-    let repos: IGithubRepoResponse[] = [];
-    let page = 1;
-    let hasNextPage = true;
-
-    while (hasNextPage) {
-        const reposUrl = `${getGithubOrgRepoUrl(orgLogin)}?per_page=100&page=${page}`;
-        const requestHeader = {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json"
-        };
-
-        try {
-            const { data, headers } = await fetchData<IGithubRepoResponse[]>(reposUrl, 'GET', undefined, requestHeader);
-            repos = repos.concat(data);
-
-            const linkHeader = headers.get('link');
-            if (linkHeader && linkHeader.includes('rel="next"')) {
-                page++;
-            } else {
-                hasNextPage = false;
-            }
-        } catch (error) {
-            console.error(`Error fetching repos for org ${orgLogin}:`, error);
-            throw error;
-        }
-    }
-
-    return repos.map(repo => ({
-        id: repo.id,
-        name: repo.name,
-        organization: orgLogin,
-        full_name: repo.full_name,
-        node_id: repo.node_id,
-        html_url: repo.html_url,
-    }));
 }
 
 /**
@@ -113,7 +88,6 @@ export async function fetchMultipleRepoData(token: string, repos: RepoOwner[]): 
 
             allRepoData.push({ owner, repo, commits, pullRequests, issues });
         }
-
         return allRepoData;
     } catch (error) {
         console.error('Error fetching repository data:', error);
@@ -129,34 +103,7 @@ export async function fetchMultipleRepoData(token: string, repos: RepoOwner[]): 
  * @returns - List of commits
  */
 export async function fetchRepoCommits(token: string, owner: string, repo: string): Promise<readonly GitHubCommit[]> {
-    let commits = [] as GitHubCommit[];
-    let page = 1;
-    let hasNextPage = true;
-
-    while (hasNextPage) {
-        const url = `${getGithubCommitsUrl(owner, repo)}?per_page=100&page=${page}`;
-        const requestHeader = {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json"
-        };
-
-        try {
-            const { data, headers } = await fetchData<GitHubCommit[]>(url, 'GET', undefined, requestHeader);
-            commits = commits.concat(data);
-
-            const linkHeader = headers.get('link');
-            if (linkHeader && linkHeader.includes('rel="next"')) {
-                page++;
-            } else {
-                hasNextPage = false;
-            }
-        } catch (error) {
-            console.error('Error fetching commits:', error);
-            throw error;
-        }
-    }
-
-    return commits;
+    return fetchPaginatedData<GitHubCommit>(token, (page) => `${getGithubCommitsUrl(owner, repo)}${PAGINATION_QUERY}${page}`);
 }
 
 /**
@@ -167,33 +114,7 @@ export async function fetchRepoCommits(token: string, owner: string, repo: strin
  * @returns - List of pull requests
  */
 export async function fetchRepoPullRequests(token: string, owner: string, repo: string): Promise<readonly GithubPullRequest[]> {
-    let pullRequests = [] as GithubPullRequest[];
-    let page = 1;
-    let hasNextPage = true;
-
-    while (hasNextPage) {
-        const url = `${getGithubPullRequestUrl(owner, repo)}?per_page=100&page=${page}`;
-        const requestHeader = {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json"
-        };
-
-        try {
-            const { data, headers } = await fetchData<GithubPullRequest[]>(url, 'GET', undefined, requestHeader);
-            pullRequests = pullRequests.concat(data);
-
-            const linkHeader = headers.get('link');
-            if (linkHeader && linkHeader.includes('rel="next"')) {
-                page++;
-            } else {
-                hasNextPage = false;
-            }
-        } catch (error) {
-            console.error('Error fetching pull requests:', error);
-            throw error;
-        }
-    }
-    return pullRequests;
+    return fetchPaginatedData<GithubPullRequest>(token, (page) => `${getGithubPullRequestUrl(owner, repo)}${PAGINATION_QUERY}${page}`);
 }
 
 
@@ -205,33 +126,7 @@ export async function fetchRepoPullRequests(token: string, owner: string, repo: 
  * @returns - List of issues
  */
 export async function fetchRepoIssues(token: string, owner: string, repo: string): Promise<readonly GitHubIssue[]> {
-    let issues = [] as GitHubIssue[];
-    let page = 1;
-    let hasNextPage = true;
-
-    while (hasNextPage) {
-        const url = `${getGithubIssuesUrl(owner, repo)}?per_page=100&page=${page}`;
-        const requestHeader = {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json"
-        };
-
-        try {
-            const { data, headers } = await fetchData<GitHubIssue[]>(url, 'GET', undefined, requestHeader);
-            issues = issues.concat(data);
-
-            const linkHeader = headers.get('link');
-            if (linkHeader && linkHeader.includes('rel="next"')) {
-                page++;
-            } else {
-                hasNextPage = false;
-            }
-        } catch (error) {
-            console.error('Error fetching issues:', error);
-            throw error;
-        }
-    }
-    return issues;
+    return fetchPaginatedData<GitHubIssue>(token, (page) => `${getGithubIssuesUrl(owner, repo)}${PAGINATION_QUERY}${page}`);
 }
 
 //#region Internal Region

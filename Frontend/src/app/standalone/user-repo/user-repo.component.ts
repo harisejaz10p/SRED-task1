@@ -103,6 +103,7 @@ export class UserRepoComponent implements OnInit, OnDestroy {
       subscribe({
         next: (checkboxChange) => {
           this.changeRepoIncluded(checkboxChange);
+          this.cdr.markForCheck();
         }
       });
   }
@@ -118,6 +119,7 @@ export class UserRepoComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error(error);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -144,9 +146,11 @@ export class UserRepoComponent implements OnInit, OnDestroy {
     this.userRepoService.changeIncludedRepo(args).subscribe({
       next: () => {
         this.getUserStats();
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error(error);
+        this.cdr.markForCheck();
       }
     });
   }

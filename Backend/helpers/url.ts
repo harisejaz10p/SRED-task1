@@ -17,7 +17,7 @@ export const getGithubOAuthUrl = (clientID: string, redirectUri: string): string
  * @returns - Github token revoke URL
  */
 export const revokeGithubTokenUrl = () => {
-    return `https://api.github.com/applications/${GITHUB_CLIENT_ID}/tokens}`;
+    return `https://api.github.com/applications/${GITHUB_CLIENT_ID}/token`;
 }
 
 /**
